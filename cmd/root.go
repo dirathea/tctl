@@ -15,31 +15,85 @@ var (
 	profileLoop int
 	rootCmd     = &cobra.Command{
 		Use:   "tctl [URL]",
-		Short: "TableCheck Control / tctl for homework assignment",
+		Short: "TableCheck CLI / tctl for homework assignment",
 		Long:  "A simple CLI to access a URL and print all the content to stdout",
 		Args:  cobra.MinimumNArgs(1),
 		RunE:  rootRun,
 	}
 )
 
-func getMean(durations []int) float64 {
-	total := 0.0
-	for _, duration := range durations {
-		total += float64(duration)
-	}
-
-	return total / float64(len(durations))
+type RunResult struct {
+	Duration   time.Duration
+	Success    bool
+	StatusCode int
+	Size       int64
 }
 
-func getMedian(durations sort.IntSlice) float64 {
-	durations.Sort()
-	isEven := len(durations)%2 == 0
-	midIndex := len(durations) / 2
-	if isEven {
-		return float64(durations[midIndex])
+type RunResultSlice []RunResult
+
+func (sl RunResultSlice) Len() int {
+	return len(sl)
+}
+
+func (rs RunResultSlice) Less(i, j int) bool {
+	return rs[i].Duration.Nanoseconds() < rs[j].Duration.Nanoseconds()
+}
+
+func (rs RunResultSlice) Swap(i, j int) {
+	rs[i], rs[j] = rs[j], rs[i]
+}
+
+func (rs RunResultSlice) Mean() time.Duration {
+	sort.Stable(rs)
+	total, _ := time.ParseDuration("0s")
+	for _, r := range rs {
+		total += r.Duration
 	}
 
-	return (float64(durations[midIndex]) + float64(durations[midIndex+1])) / 2
+	return time.Duration(total.Nanoseconds() / int64(len(rs)))
+}
+
+func (rs RunResultSlice) Median() time.Duration {
+	sort.Stable(rs)
+	midIndex := len(rs) / 2
+	if rs.isEven() {
+		return time.Duration((rs[midIndex-1].Duration + rs[midIndex].Duration) / 2)
+	}
+
+	return rs[midIndex].Duration
+}
+
+func (rs RunResultSlice) isEven() bool {
+	return len(rs)%2 == 0
+}
+
+func (rs RunResultSlice) PercentSuccess() float64 {
+	totalSuccess := 0
+	for _, result := range rs {
+		if result.Success {
+			totalSuccess += 1
+		}
+	}
+
+	return (float64(totalSuccess) / float64(len(rs))) * 100
+}
+
+func (sl RunResultSlice) AllErrorStatusCode() []int {
+	allCodes := map[int]bool{}
+
+	for _, result := range sl {
+		if !result.Success {
+			allCodes[result.StatusCode] = true
+		}
+	}
+
+	results := []int{}
+
+	for c := range allCodes {
+		results = append(results, c)
+	}
+
+	return results
 }
 
 func rootRun(cmd *cobra.Command, args []string) (err error) {
@@ -55,26 +109,21 @@ func rootRun(cmd *cobra.Command, args []string) (err error) {
 		return nil
 	}
 
-	type RunResult struct {
-		Duration   time.Duration
-		Success    bool
-		StatusCode int
-	}
-
-	results := []RunResult{}
+	results := RunResultSlice{}
+	var wg sync.WaitGroup
 
 	runFunc := func(client *resty.Client, url string) {
-		resp, err := client.R().Get(url)
+		resp, _ := client.R().Get(url)
 		result := RunResult{
 			Duration:   resp.Time(),
-			Success:    err == nil,
+			Success:    resp.IsSuccess(),
 			StatusCode: resp.StatusCode(),
+			Size:       resp.Size(),
 		}
 
 		results = append(results, result)
+		wg.Done()
 	}
-
-	var wg sync.WaitGroup
 
 	for i := 0; i < profileLoop; i++ {
 		wg.Add(1)
@@ -82,6 +131,25 @@ func rootRun(cmd *cobra.Command, args []string) (err error) {
 	}
 
 	wg.Wait()
+
+	// Sort ascending
+	sort.Stable(results)
+
+	fmt.Printf("Min %v\n", results[0].Duration)
+	fmt.Printf("Max %v\n", results[len(results)-1].Duration)
+	fmt.Printf("Mean %v\n", results.Mean())
+	fmt.Printf("Median %v\n", results.Median())
+	fmt.Printf("Total Success %v %%\n", results.PercentSuccess())
+	fmt.Printf("All Failed status code %v\n", results.AllErrorStatusCode())
+
+	// Sort based on response size
+
+	sort.SliceStable(results, func(x, y int) bool {
+		return results[x].Size < results[y].Size
+	})
+
+	fmt.Printf("Min size %v\n", results[0].Size)
+	fmt.Printf("Max size %v\n", results[len(results)-1].Size)
 
 	return nil
 }
