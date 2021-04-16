@@ -5,7 +5,6 @@ import (
 	"os"
 	"sort"
 	"sync"
-	"time"
 
 	"github.com/go-resty/resty/v2"
 	"github.com/spf13/cobra"
@@ -21,80 +20,6 @@ var (
 		RunE:  rootRun,
 	}
 )
-
-type RunResult struct {
-	Duration   time.Duration
-	Success    bool
-	StatusCode int
-	Size       int64
-}
-
-type RunResultSlice []RunResult
-
-func (sl RunResultSlice) Len() int {
-	return len(sl)
-}
-
-func (rs RunResultSlice) Less(i, j int) bool {
-	return rs[i].Duration.Nanoseconds() < rs[j].Duration.Nanoseconds()
-}
-
-func (rs RunResultSlice) Swap(i, j int) {
-	rs[i], rs[j] = rs[j], rs[i]
-}
-
-func (rs RunResultSlice) Mean() time.Duration {
-	sort.Stable(rs)
-	total, _ := time.ParseDuration("0s")
-	for _, r := range rs {
-		total += r.Duration
-	}
-
-	return time.Duration(total.Nanoseconds() / int64(len(rs)))
-}
-
-func (rs RunResultSlice) Median() time.Duration {
-	sort.Stable(rs)
-	midIndex := len(rs) / 2
-	if rs.isEven() {
-		return time.Duration((rs[midIndex-1].Duration + rs[midIndex].Duration) / 2)
-	}
-
-	return rs[midIndex].Duration
-}
-
-func (rs RunResultSlice) isEven() bool {
-	return len(rs)%2 == 0
-}
-
-func (rs RunResultSlice) PercentSuccess() float64 {
-	totalSuccess := 0
-	for _, result := range rs {
-		if result.Success {
-			totalSuccess += 1
-		}
-	}
-
-	return (float64(totalSuccess) / float64(len(rs))) * 100
-}
-
-func (sl RunResultSlice) AllErrorStatusCode() []int {
-	allCodes := map[int]bool{}
-
-	for _, result := range sl {
-		if !result.Success {
-			allCodes[result.StatusCode] = true
-		}
-	}
-
-	results := []int{}
-
-	for c := range allCodes {
-		results = append(results, c)
-	}
-
-	return results
-}
 
 func rootRun(cmd *cobra.Command, args []string) (err error) {
 	url := args[0]
@@ -143,7 +68,6 @@ func rootRun(cmd *cobra.Command, args []string) (err error) {
 	fmt.Printf("All Failed status code %v\n", results.AllErrorStatusCode())
 
 	// Sort based on response size
-
 	sort.SliceStable(results, func(x, y int) bool {
 		return results[x].Size < results[y].Size
 	})
