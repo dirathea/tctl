@@ -104,6 +104,31 @@ goreleaser --snapshot --skip-publish --rm-dist
 
 it will automatically delete your `dist` directory, build the `tctl`, and not publishing it to the repository.
 
+## Features
+
+### Profile
+The `--profile` takes an integer argument as the number of request should be done by the apps. Then it will be print all the statistics to profile the URL.
+
+```shell
+➜ ./tctl https://tablecheck.dirathea.workers.dev/ --profile 10
+Min 926.345292ms
+Max 1.093930542s
+Mean 1.027808608s
+Median 1.041777208s
+Total Success 100 %
+All Failed status code []
+Min size 3237
+Max size 3237
+```
+
+Here's some comparison between several popular URL with parameters 10
+
+| URL | Result |
+| --- | ------ |
+| https://tablecheck.dirathea.workers.dev/ | ![screenshot for tablecheck profile](resources/img/Screenshot-tablecheck-workers.png) |
+| https://google.com/ | ![screenshot for google profile](resources/img/Screenshot-google.png) |
+| https://twitter.com/ | ![screenshot for twitter profile](resources/img/Screenshot-twitter.png) |
+
 ## Links
 
 - Assignment Page: https://github.com/tablecheck/tablecheck-2020-systems-engineering-assignment
