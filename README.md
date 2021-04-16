@@ -110,15 +110,17 @@ it will automatically delete your `dist` directory, build the `tctl`, and not pu
 The `--profile` takes an integer argument as the number of request should be done by the apps. Then it will be print all the statistics to profile the URL.
 
 ```shell
-➜ ./tctl https://tablecheck.dirathea.workers.dev/ --profile 10
-Min 926.345292ms
-Max 1.093930542s
-Mean 1.027808608s
-Median 1.041777208s
-Total Success 100 %
-All Failed status code []
-Min size 3237
-Max size 3237
+➜ ./dist/tctl_darwin_arm64/tctl https://tablecheck.dirathea.workers.dev/ --profile 10
++----------------------------+--------------+
+| Min                        | 1.00319225s  |
+| Max                        | 1.159872125s |
+| Mean                       | 1.103815935s |
+| Median                     | 1.076868083s |
+| Success Percentage         |          100 |
+| All Failed status code     | []           |
+| Min Response size in bytes |         3237 |
+| Max Response size in bytes |         3237 |
++----------------------------+--------------+
 ```
 
 Here's some comparison between several popular URL with parameters 10
