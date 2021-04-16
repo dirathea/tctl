@@ -7,6 +7,7 @@ import (
 	"sync"
 
 	"github.com/go-resty/resty/v2"
+	"github.com/olekukonko/tablewriter"
 	"github.com/spf13/cobra"
 )
 
@@ -60,22 +61,30 @@ func rootRun(cmd *cobra.Command, args []string) (err error) {
 
 	// Sort ascending
 	sort.Stable(results)
+	tableData := [][]string{
+		{"Min", fmt.Sprint(results[0].Duration)},
+		{"Max", fmt.Sprint(results[len(results)-1].Duration)},
+		{"Mean", fmt.Sprint(results.Mean())},
+		{"Median", fmt.Sprint(results.Median())},
+		{"Success Percentage", fmt.Sprint(results.PercentSuccess())},
+		{"All Failed status code", fmt.Sprint(results.AllErrorStatusCode())},
+	}
 
-	fmt.Printf("Min %v\n", results[0].Duration)
-	fmt.Printf("Max %v\n", results[len(results)-1].Duration)
-	fmt.Printf("Mean %v\n", results.Mean())
-	fmt.Printf("Median %v\n", results.Median())
-	fmt.Printf("Total Success %v %%\n", results.PercentSuccess())
-	fmt.Printf("All Failed status code %v\n", results.AllErrorStatusCode())
+	table := tablewriter.NewWriter(os.Stdout)
+	table.AppendBulk(tableData)
 
 	// Sort based on response size
 	sort.SliceStable(results, func(x, y int) bool {
 		return results[x].Size < results[y].Size
 	})
 
-	fmt.Printf("Min size %v\n", results[0].Size)
-	fmt.Printf("Max size %v\n", results[len(results)-1].Size)
+	sizeData := [][]string{
+		{"Min Response size in bytes", fmt.Sprint(results[0].Size)},
+		{"Max Response size in bytes", fmt.Sprint(results[len(results)-1].Size)},
+	}
 
+	table.AppendBulk(sizeData)
+	table.Render()
 	return nil
 }
 
