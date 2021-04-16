@@ -92,7 +92,9 @@ func init() {
 	rootCmd.Flags().IntVarP(&profileLoop, "profile", "p", 0, "Do profiling to the URL by accessing it several times and calculate response duration statistic")
 }
 
-func Execute() {
+func Execute(version string) {
+	// Assign supplied version to vars for versionCmd
+	Version = version
 	if err := rootCmd.Execute(); err != nil {
 		fmt.Fprintln(os.Stderr, err)
 		os.Exit(1)
