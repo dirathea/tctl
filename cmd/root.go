@@ -50,6 +50,7 @@ func rootRun(cmd *cobra.Command, args []string) (err error) {
 		wg.Done()
 	}
 
+	// Do multiple requests simultaneously
 	for i := 0; i < profileLoop; i++ {
 		wg.Add(1)
 		go runFunc(client, url)
